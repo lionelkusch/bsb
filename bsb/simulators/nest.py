@@ -282,8 +282,10 @@ class NestDevice(TargetsNeurons, SimulationComponent):
         """
         Return the targets of the stimulation to pass into the nest.Connect call.
         """
-        targets = np.array(self.get_targets(), dtype=int)
-        return self.adapter.get_nest_ids(targets)
+        tmp = self.adapter.get_nest_ids(np.array(self._get_targets(), dtype=int))
+        tmp [0] = tmp[0] + tmp[1] # for having a group of neurons at the beginning and not a single neurons
+        tmp.pop(1)
+        return np.sum(tmp)
 
 
 class NestEntity(NestDevice, MapsScaffoldIdentifiers):
@@ -493,8 +495,6 @@ class NestAdapter(SimulatorAdapter):
     def reset_processes(self, threads):
         master_seed = self.get_master_seed()
         total_num = _MPI_processes * threads
-        # Create a range of random seeds and generators.
-        random_generator_seeds = range(master_seed, master_seed + total_num)
         # Create a different range of random seeds for the kernel.
         thread_seeds = range(master_seed + 1 + total_num, master_seed + 1 + 2 * total_num)
         success = True
@@ -878,7 +878,7 @@ class NestAdapter(SimulatorAdapter):
             # Execute targetting mechanism to fetch target NEST ID's
             device_targets = device_model.get_nest_targets()
             report(
-                "Connecting to {} device targets.".format(len(device_targets)), level=3
+                "Connecting to {} device targets.".format(len(device_targets.tolist())), level=3
             )
             # Collect the NEST Connect parameters
             if device_model.io == "input":
