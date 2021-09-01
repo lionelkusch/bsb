@@ -495,8 +495,8 @@ class NestAdapter(SimulatorAdapter):
     def reset_processes(self, threads):
         master_seed = self.get_master_seed()
         total_num = _MPI_processes * threads
-        # Create a different range of random seeds for the kernel.
-        thread_seeds = range(master_seed + 1 + total_num, master_seed + 1 + 2 * total_num)
+        # Create a range of random seeds and generators.
+        random_generator_seeds = range(master_seed, master_seed + total_num)
         success = True
         try:
             # Update the kernel with the new RNG and thread state.
