@@ -1,4 +1,5 @@
-import os, numpy as np
+import os
+import numpy as np
 from .strategy import ConnectionStrategy, TouchingConvergenceDivergence
 from ..exceptions import *
 from ..reporting import report, warn
@@ -23,7 +24,8 @@ class Convergence(TouchingConvergenceDivergence):
 
         pre_post = np.zeros((convergence * len(post), 2))
         for i, neuron in enumerate(post):
-            connected_pre = np.random.choice(pre[:, 0], convergence, replace=False)
+            connected_pre = np.random.choice(
+                pre[:, 0], convergence, replace=False)
             range_i = range(i * convergence, (i + 1) * convergence)
             pre_post[range_i, 0] = connected_pre.astype(int)
             pre_post[range_i, 1] = neuron[0]
@@ -59,7 +61,8 @@ class ExternalConnections(ConnectionStrategy):
     """
 
     required = ["source"]
-    casts = {"format": str, "warn_missing": bool, "use_map": bool, "headers": bool}
+    casts = {"format": str, "warn_missing": bool,
+             "use_map": bool, "headers": bool}
     defaults = {
         "format": "csv",
         "headers": True,
@@ -88,7 +91,8 @@ class ExternalConnections(ConnectionStrategy):
     def _connect_from_csv(self):
         if not self.check_external_source():
             src = self.get_external_source()
-            raise RuntimeError(f"Missing source file '{src}' for `{self.name}`.")
+            raise RuntimeError(
+                f"Missing source file '{src}' for `{self.name}`.")
         from_type = self.from_cell_types[0]
         to_type = self.to_cell_types[0]
         # Read the entire csv, skipping the headers if there are any.
@@ -98,10 +102,11 @@ class ExternalConnections(ConnectionStrategy):
             delimiter=self.delimiter,
         )
         if self.use_map:
-            emap_name = lambda t: t.placement.name + "_ext_map"
+            def emap_name(t): return t.placement.name + "_ext_map"
             from_gid_map = self.scaffold.load_appendix(emap_name(from_type))
             to_gid_map = self.scaffold.load_appendix(emap_name(to_type))
-            from_targets = self.scaffold.get_placement_set(from_type).identifiers
+            from_targets = self.scaffold.get_placement_set(
+                from_type).identifiers
             to_targets = self.scaffold.get_placement_set(to_type).identifiers
             data[:, 0] = self._map(data[:, 0], from_gid_map, from_targets)
             data[:, 1] = self._map(data[:, 1], to_gid_map, to_targets)
@@ -111,6 +116,6 @@ class ExternalConnections(ConnectionStrategy):
         # Create a dict with pairs between the map and the target values
         # Vectorize its dictionary lookup and perform the vector function on the data
         try:
-            return np.vectorize(dict(zip(map, targets)).get)(data)
+            return np.vectorize(dict(zip(map, targets.astype(float))).get)(data.astype(float))
         except TypeError:
             raise SourceQualityError("Missing GIDs in external map.")
