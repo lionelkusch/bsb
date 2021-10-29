@@ -8,7 +8,11 @@ from ..models import ConnectivitySet
 from ..helpers import ListEvalConfiguration, listify_input
 from ..reporting import report, warn
 from ..exceptions import *
-import time, os, json, weakref, numpy as np
+import time
+import os
+import json
+import weakref
+import numpy as np
 from itertools import chain
 from copy import deepcopy
 from sklearn.neighbors import KDTree
@@ -189,7 +193,8 @@ class NestConnection(SimulationComponent):
         return params
 
     def _get_cell_types(self, key="from"):
-        meta = self.scaffold.output_formatter.get_connectivity_set_meta(self.name)
+        meta = self.scaffold.output_formatter.get_connectivity_set_meta(
+            self.name)
         if key + "_cell_types" in meta:
             cell_types = set()
             for name in meta[key + "_cell_types"]:
@@ -282,8 +287,10 @@ class NestDevice(TargetsNeurons, SimulationComponent):
         """
         Return the targets of the stimulation to pass into the nest.Connect call.
         """
-        tmp = self.adapter.get_nest_ids(np.array(self._get_targets(), dtype=int))
-        tmp [0] = tmp[0] + tmp[1] # for having a group of neurons at the beginning and not a single neurons
+        tmp = self.adapter.get_nest_ids(
+            np.array(self._get_targets(), dtype=int))
+        # for having a group of neurons at the beginning and not a single neurons
+        tmp[0] = tmp[0] + tmp[1]
         tmp.pop(1)
         return np.sum(tmp)
 
@@ -487,7 +494,8 @@ class NestAdapter(SimulatorAdapter):
                     fixed_seed = int(time.time())
                 else:
                     fixed_seed = None
-                self._master_seed = mpi4py.MPI.COMM_WORLD.bcast(fixed_seed, root=0)
+                self._master_seed = mpi4py.MPI.COMM_WORLD.bcast(
+                    fixed_seed, root=0)
             else:
                 self._master_seed = fixed_seed
         return self._master_seed
@@ -575,7 +583,8 @@ class NestAdapter(SimulatorAdapter):
                         else:
                             warn(
                                 "Recorder {} processing errored out: {}".format(
-                                    path, "{} {}".format(data.dtype, data.shape)
+                                    path, "{} {}".format(
+                                        data.dtype, data.shape)
                                 )
                             )
         mpi4py.MPI.COMM_WORLD.bcast(result_path, root=0)
@@ -641,7 +650,8 @@ class NestAdapter(SimulatorAdapter):
                         # the adapter installs the modules each
                         # `reset`/`prepare` cycle.
                         if module in hot:
-                            warn(f"Already installed '{module}'.", KernelWarning)
+                            warn(
+                                f"Already installed '{module}'.", KernelWarning)
                     elif "file not found" in e.message:
                         raise NestModuleError(
                             "Module {} not found".format(module)
@@ -659,7 +669,8 @@ class NestAdapter(SimulatorAdapter):
             # "Freeze" the type's identifiers into a map
             mapping_type._build_identifier_map()
             # Add the type's map to the global map
-            self.global_identifier_map.update(mapping_type.scaffold_to_nest_map)
+            self.global_identifier_map.update(
+                mapping_type.scaffold_to_nest_map)
 
     def get_nest_ids(self, ids):
         return [self.global_identifier_map[id] for id in ids]
@@ -683,7 +694,8 @@ class NestAdapter(SimulatorAdapter):
             report(
                 "Creating {} {}...".format(len(scaffold_identifiers), nest_name), level=3
             )
-            nest_node_collection = self.nest.Create(nest_name, len(scaffold_identifiers))
+            nest_node_collection = self.nest.Create(
+                nest_name, len(scaffold_identifiers))
             cell_model.scaffold_identifiers.extend(scaffold_identifiers)
             cell_model.nest_identifiers.extend(nest_node_collection.tolist())
 
@@ -696,7 +708,8 @@ class NestAdapter(SimulatorAdapter):
             # Create the cell model in the simulator
             report("Creating " + nest_name + "...", level=3)
             # Create entities as NEST nodes and extract list of GIDs
-            entity_nodes = (self.nest.Create(entity_type.device, count)).tolist()
+            entity_nodes = (self.nest.Create(
+                entity_type.device, count)).tolist()
             report("Creating {} {}...".format(count, nest_name), level=3)
             if hasattr(entity_type, "parameters"):
                 # Execute SetStatus and catch DictError
@@ -784,7 +797,8 @@ class NestAdapter(SimulatorAdapter):
                     # once, without setting any receptor type in the conn params.
                     receptor_types.append(None)
                 for receptor_type in receptor_types:
-                    single_connection_parameters = deepcopy(connection_parameters)
+                    single_connection_parameters = deepcopy(
+                        connection_parameters)
                     if receptor_type is not None:
                         single_connection_parameters["receptor_type"] = receptor_type
                     self.execute_command(
@@ -797,7 +811,8 @@ class NestAdapter(SimulatorAdapter):
                             "IncompatibleReceptorType": {
                                 "from": None,
                                 "exception": catch_receptor_error(
-                                    "Invalid receptor specifications in {}: ".format(name)
+                                    "Invalid receptor specifications in {}: ".format(
+                                        name)
                                 ),
                             }
                         },
@@ -828,7 +843,8 @@ class NestAdapter(SimulatorAdapter):
                             "IncompatibleReceptorType": {
                                 "from": None,
                                 "exception": catch_receptor_error(
-                                    "Invalid receptor specifications in {}: ".format(name)
+                                    "Invalid receptor specifications in {}: ".format(
+                                        name)
                                 ),
                             }
                         },
@@ -876,9 +892,10 @@ class NestAdapter(SimulatorAdapter):
             )
             device_model.protocol.after_create(device)
             # Execute targetting mechanism to fetch target NEST ID's
-            device_targets = device_model.get_nest_targets()
+            device_targets = listify_input(
+                device_model.get_nest_targets().tolist())
             report(
-                "Connecting to {} device targets.".format(len(device_targets.tolist())), level=3
+                "Connecting to {} device targets.".format(len(device_targets)), level=3
             )
             # Collect the NEST Connect parameters
             if device_model.io == "input":
@@ -940,7 +957,8 @@ class NestAdapter(SimulatorAdapter):
         )
         self.nest.CopyModel(connection_model.synapse_model, nest_name)
         # Get the synapse parameters
-        params = connection_model.get_synapse_parameters(connection_model.synapse_model)
+        params = connection_model.get_synapse_parameters(
+            connection_model.synapse_model)
         # Set the parameters in NEST
         self.nest.SetDefaults(nest_name, params)
 
@@ -948,7 +966,8 @@ class NestAdapter(SimulatorAdapter):
     # CerebNEST module. See https://github.com/nest/nest-simulator/issues/1317
     # And https://github.com/alberto-antonietti/CerebNEST/issues/10
     def create_volume_transmitter(self, synapse_model, postsynaptic_cells):
-        vt = self.nest.Create("volume_transmitter_alberto", len(postsynaptic_cells))
+        vt = self.nest.Create("volume_transmitter_alberto",
+                              len(postsynaptic_cells))
         teacher = vt[0]
         # Assign the volume transmitters to their synapse model
         nest_name = self.suffixed(synapse_model.name)
@@ -985,7 +1004,8 @@ def catch_dict_error(message):
             map(lambda x: x.strip(), e.errormessage.split(":")[-1].split(","))
         )
         return NestModelError(
-            message + "Unknown attributes {}".format("'" + "', '".join(attributes) + "'")
+            message +
+            "Unknown attributes {}".format("'" + "', '".join(attributes) + "'")
         )
 
     return handler
@@ -1001,7 +1021,8 @@ def catch_receptor_error(message):
 def catch_connection_error(source):
     def handler(e):
         return NestModelError(
-            "Illegal connections for '{}'".format(source) + ": " + e.errormessage
+            "Illegal connections for '{}'".format(
+                source) + ": " + e.errormessage
         )
 
     return handler
@@ -1026,11 +1047,13 @@ class SpikeRecorder(SimulationRecorder):
                 # if len(file_spikes):
                 if len(file_spikes.shape) > 1:
                     scaffold_ids = np.array(
-                        self.device_model.adapter.get_scaffold_ids(file_spikes[:, 0])
+                        self.device_model.adapter.get_scaffold_ids(
+                            file_spikes[:, 0])
                     )
                     self.cell_types = list(
                         set(
-                            self.device_model.adapter.scaffold.get_gid_types(scaffold_ids)
+                            self.device_model.adapter.scaffold.get_gid_types(
+                                scaffold_ids)
                         )
                     )
                     times = file_spikes[:, 1]
