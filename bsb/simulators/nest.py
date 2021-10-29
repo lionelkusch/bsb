@@ -287,13 +287,8 @@ class NestDevice(TargetsNeurons, SimulationComponent):
         """
         Return the targets of the stimulation to pass into the nest.Connect call.
         """
-        tmp = self.adapter.get_nest_ids(
+        return self.adapter.get_nest_ids(
             np.array(self._get_targets(), dtype=int))
-        # for having a group of neurons at the beginning and not a single neurons
-        tmp[0] = tmp[0] + tmp[1]
-        tmp.pop(1)
-        return np.sum(tmp)
-
 
 class NestEntity(NestDevice, MapsScaffoldIdentifiers):
     node_name = "simulations.?.entities"
@@ -868,13 +863,17 @@ class NestAdapter(SimulatorAdapter):
         Create the configured NEST devices in the simulator
         """
         for device_model in self.devices.values():
+            print(device_model.parameters)
             device_model.initialise_targets()
+            print(device_model.parameters)
             device_model.protocol.before_create()
+            print(device_model.parameters)
             device = self.nest.Create(device_model.device)
             report("Creating device:  " + device_model.device, level=3)
             if hasattr(device_model, "record_to"):
                 device.record_to = device_model.record_to
             # Execute SetStatus and catch DictError
+            print(device_model.parameters)
             self.execute_command(
                 self.nest.SetStatus,
                 device,
@@ -892,8 +891,7 @@ class NestAdapter(SimulatorAdapter):
             )
             device_model.protocol.after_create(device)
             # Execute targetting mechanism to fetch target NEST ID's
-            device_targets = listify_input(
-                device_model.get_nest_targets().tolist())
+            device_targets = device_model.get_nest_targets()
             report(
                 "Connecting to {} device targets.".format(len(device_targets)), level=3
             )
@@ -1112,7 +1110,8 @@ class SpikeDetectorProtocol(DeviceProtocol):
         device_tag = mpi4py.MPI.COMM_WORLD.bcast(device_tag, root=0)
         if not hasattr(self.device, "_orig_label"):
             self.device._orig_label = self.device.parameters["label"]
-        self.device.parameters["label"] = self.device._orig_label + device_tag
+        if self.device.parameters["record_to"] != "mpi-stream":
+            self.device.parameters["label"] = self.device._orig_label + device_tag
         if mpi4py.MPI.COMM_WORLD.rank == 0:
             self.device.adapter.result.add(SpikeRecorder(self.device))
 

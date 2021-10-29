@@ -71,7 +71,7 @@ class TargetsNeurons:
                 ids = np.array(self.scaffold.get_placement_set(t).identifiers)
             else:
                 ids = np.concatenate(
-                    ids, np.array(self.scaffold.get_placement_set(t).identifiers)
+                    (ids, np.array(self.scaffold.get_placement_set(t).identifiers))
                 )
         n = len(ids)
         # Use the `cell_fraction` or `cell_count` attribute to determine what portion of
