@@ -913,6 +913,7 @@ class NestAdapter(SimulatorAdapter):
                 )
             connect_params.append(device_model.connection)
             connect_params.append(device_model.synapse)
+            import ipdb; ipdb.set_trace()            
             # Send the Connect command to NEST and catch IllegalConnection errors.
             self.execute_command(
                 self.nest.Connect,
@@ -1110,7 +1111,7 @@ class SpikeDetectorProtocol(DeviceProtocol):
         device_tag = mpi4py.MPI.COMM_WORLD.bcast(device_tag, root=0)
         if not hasattr(self.device, "_orig_label"):
             self.device._orig_label = self.device.parameters["label"]
-        if self.device.parameters["record_to"] != "mpi-stream":
+        if  "record_to" in self.device.parameters and self.device.parameters["record_to"] != "mpi-stream":
             self.device.parameters["label"] = self.device._orig_label + device_tag
         if mpi4py.MPI.COMM_WORLD.rank == 0:
             self.device.adapter.result.add(SpikeRecorder(self.device))
