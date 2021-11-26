@@ -66,7 +66,6 @@ class TargetsNeurons:
         Target all cells of certain cell types
         """
         ids = None
-        #import ipdb; ipdb.set_trace()
         for t in self.cell_types:
             if ids is None:
                 ids = np.array(self.scaffold.get_placement_set(t).identifiers)

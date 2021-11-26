@@ -20,7 +20,6 @@ from ..simulation import SimulationRecorder, SimulationResult
 import warnings
 import h5py
 import time
-import ipdb
 
 try:
     from functools import cached_property, cache
@@ -472,7 +471,6 @@ class NestAdapter(SimulatorAdapter):
             }
         )
 
-
     def reset(self):
         self.is_prepared = False
         if hasattr(self, "nest"):
@@ -917,7 +915,6 @@ class NestAdapter(SimulatorAdapter):
             connect_params.append(device_model.connection)
             connect_params.append(device_model.synapse)
             # Send the Connect command to NEST and catch IllegalConnection errors.
-            # print("Resolution is set to %f"%self.resolution,self.nest.GetKernelStatus()['resolution'])
             self.execute_command(
                 self.nest.Connect,
                 *connect_params,
