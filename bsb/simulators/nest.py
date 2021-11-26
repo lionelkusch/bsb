@@ -20,6 +20,7 @@ from ..simulation import SimulationRecorder, SimulationResult
 import warnings
 import h5py
 import time
+import ipdb
 
 try:
     from functools import cached_property, cache
@@ -215,20 +216,20 @@ class NestConnection(SimulationComponent):
 
     def should_specify_receptor_type(self):
         _, to_cell_types = self.get_cell_types()
-        if len(to_cell_types) > 1:
-            raise NotImplementedError(
-                "Specifying receptor types of connections consisiting of more than 1 cell type is currently undefined behaviour."
-            )
+        # if len(to_cell_types) > 1:
+        #     raise NotImplementedError(
+        #         "Specifying receptor types of connections consisiting of more than 1 cell type is currently undefined behaviour."
+        #     )
         to_cell_type = to_cell_types[0]
         to_cell_model = self.adapter.cell_models[to_cell_type.name]
         return to_cell_model.neuron_model in to_cell_model.receptor_specifications
 
     def get_receptor_type(self):
         from_cell_types, to_cell_types = self.get_cell_types()
-        if len(to_cell_types) > 1:
-            raise NotImplementedError(
-                "Specifying receptor types of connections consisiting of more than 1 target cell type is currently undefined behaviour."
-            )
+        # if len(to_cell_types) > 1:
+        #     raise NotImplementedError(
+        #         "Specifying receptor types of connections consisiting of more than 1 target cell type is currently undefined behaviour."
+        #     )
         if len(from_cell_types) > 1:
             raise NotImplementedError(
                 "Specifying receptor types of connections consisting of more than 1 origin cell type is currently undefined behaviour."
@@ -470,6 +471,7 @@ class NestAdapter(SimulatorAdapter):
                 ),
             }
         )
+
 
     def reset(self):
         self.is_prepared = False
@@ -794,8 +796,13 @@ class NestAdapter(SimulatorAdapter):
                 for receptor_type in receptor_types:
                     single_connection_parameters = deepcopy(
                         connection_parameters)
+                    single_connection_parameters['synapse_model'] = single_connection_parameters['model']
+                    del(single_connection_parameters['model'])
                     if receptor_type is not None:
                         single_connection_parameters["receptor_type"] = receptor_type
+                    weights = np.ones_like(postsynaptic_targets) * single_connection_parameters['weight']
+                    single_connection_parameters['weight'] = weights
+                    single_connection_parameters['delay'] = np.ones_like(postsynaptic_targets) * single_connection_parameters['delay']
                     self.execute_command(
                         self.nest.Connect,
                         presynaptic_sources,
@@ -863,17 +870,13 @@ class NestAdapter(SimulatorAdapter):
         Create the configured NEST devices in the simulator
         """
         for device_model in self.devices.values():
-            print(device_model.parameters)
             device_model.initialise_targets()
-            print(device_model.parameters)
             device_model.protocol.before_create()
-            print(device_model.parameters)
             device = self.nest.Create(device_model.device)
             report("Creating device:  " + device_model.device, level=3)
             if hasattr(device_model, "record_to"):
                 device.record_to = device_model.record_to
             # Execute SetStatus and catch DictError
-            print(device_model.parameters)
             self.execute_command(
                 self.nest.SetStatus,
                 device,
@@ -913,8 +916,8 @@ class NestAdapter(SimulatorAdapter):
                 )
             connect_params.append(device_model.connection)
             connect_params.append(device_model.synapse)
-            import ipdb; ipdb.set_trace()            
             # Send the Connect command to NEST and catch IllegalConnection errors.
+            # print("Resolution is set to %f"%self.resolution,self.nest.GetKernelStatus()['resolution'])
             self.execute_command(
                 self.nest.Connect,
                 *connect_params,

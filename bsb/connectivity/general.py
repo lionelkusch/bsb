@@ -94,7 +94,7 @@ class ExternalConnections(ConnectionStrategy):
             raise RuntimeError(
                 f"Missing source file '{src}' for `{self.name}`.")
         from_type = self.from_cell_types[0]
-        to_type = self.to_cell_types[0]
+        to_types = self.to_cell_types
         # Read the entire csv, skipping the headers if there are any.
         data = np.loadtxt(
             self.get_external_source(),
@@ -104,13 +104,20 @@ class ExternalConnections(ConnectionStrategy):
         if self.use_map:
             def emap_name(t): return t.placement.name + "_ext_map"
             from_gid_map = self.scaffold.load_appendix(emap_name(from_type))
-            to_gid_map = self.scaffold.load_appendix(emap_name(to_type))
             from_targets = self.scaffold.get_placement_set(
                 from_type).identifiers
-            to_targets = self.scaffold.get_placement_set(to_type).identifiers
-            data[:, 0] = self._map(data[:, 0], from_gid_map, from_targets)
-            data[:, 1] = self._map(data[:, 1], to_gid_map, to_targets)
-        self.scaffold.connect_cells(self, data)
+            to_gid_map = np.array([])
+            to_targets = np.array([])
+            for to_type in to_types:
+                to_gid_map = np.append(to_gid_map,self.scaffold.load_appendix(emap_name(to_type)))                
+                to_targets = np.append(to_targets,self.scaffold.get_placement_set(to_type).identifiers)
+            data_mapped = np.zeros_like(data)
+            data_mapped[:, 0] = self._map(data[:, 0], from_gid_map, from_targets)
+            data_mapped[:, 1] = self._map(data[:, 1], to_gid_map, to_targets)
+            if np.count_nonzero(np.isnan(data_mapped[:,1]))>0:
+                print("There are nan in",to_types)
+            
+        self.scaffold.connect_cells(self, data_mapped)
 
     def _map(self, data, map, targets):
         # Create a dict with pairs between the map and the target values
