@@ -553,6 +553,9 @@ class NestAdapter(SimulatorAdapter):
 
         timestamp = str(time.time()).split(".")[0] + str(_randint())
         result_path = "results_" + self.name + "_" + timestamp + ".hdf5"
+        output_path = self.scaffold.output_formatter.get_simulator_output_path(self.simulator_name)
+        if not output_path:
+            result_path = "%s/%s"%(output_path,result_path)
         if rank == 0:
             with h5py.File(result_path, "a") as f:
                 f.attrs["configuration_string"] = self.scaffold.configuration._raw
