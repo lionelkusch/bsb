@@ -290,6 +290,7 @@ class NestDevice(TargetsNeurons, SimulationComponent):
         return self.adapter.get_nest_ids(
             np.array(self._get_targets(), dtype=int))
 
+
 class NestEntity(NestDevice, MapsScaffoldIdentifiers):
     node_name = "simulations.?.entities"
 
@@ -552,10 +553,8 @@ class NestAdapter(SimulatorAdapter):
             rank = 0
 
         timestamp = str(time.time()).split(".")[0] + str(_randint())
-        result_path = "results_" + self.name + "_" + timestamp + ".hdf5"
-        output_path = self.scaffold.output_formatter.get_simulator_output_path(self.simulator_name)
-        if not output_path:
-            result_path = "%s/%s"%(output_path,result_path)
+        result_path = "/scratch/snx3000/bp000432/showcase_2/mouse_sarus/nest/results_" + \
+            self.name + "_" + timestamp + ".hdf5"
         if rank == 0:
             with h5py.File(result_path, "a") as f:
                 f.attrs["configuration_string"] = self.scaffold.configuration._raw
@@ -801,9 +800,11 @@ class NestAdapter(SimulatorAdapter):
                     del(single_connection_parameters['model'])
                     if receptor_type is not None:
                         single_connection_parameters["receptor_type"] = receptor_type
-                    weights = np.ones_like(postsynaptic_targets) * single_connection_parameters['weight']
+                    weights = np.ones_like(
+                        postsynaptic_targets) * single_connection_parameters['weight']
                     single_connection_parameters['weight'] = weights
-                    single_connection_parameters['delay'] = np.ones_like(postsynaptic_targets) * single_connection_parameters['delay']
+                    single_connection_parameters['delay'] = np.ones_like(
+                        postsynaptic_targets) * single_connection_parameters['delay']
                     self.execute_command(
                         self.nest.Connect,
                         presynaptic_sources,
@@ -1114,7 +1115,7 @@ class SpikeDetectorProtocol(DeviceProtocol):
         device_tag = mpi4py.MPI.COMM_WORLD.bcast(device_tag, root=0)
         if not hasattr(self.device, "_orig_label"):
             self.device._orig_label = self.device.parameters["label"]
-        if  "record_to" in self.device.parameters and self.device.parameters["record_to"] != "mpi-stream":
+        if "record_to" in self.device.parameters and self.device.parameters["record_to"] != "mpi-stream":
             self.device.parameters["label"] = self.device._orig_label + device_tag
         if mpi4py.MPI.COMM_WORLD.rank == 0:
             self.device.adapter.result.add(SpikeRecorder(self.device))
