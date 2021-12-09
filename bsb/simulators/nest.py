@@ -215,20 +215,20 @@ class NestConnection(SimulationComponent):
 
     def should_specify_receptor_type(self):
         _, to_cell_types = self.get_cell_types()
-        if len(to_cell_types) > 1:
-            raise NotImplementedError(
-                "Specifying receptor types of connections consisiting of more than 1 cell type is currently undefined behaviour."
-            )
+        # if len(to_cell_types) > 1:
+        #     raise NotImplementedError(
+        #         "Specifying receptor types of connections consisiting of more than 1 cell type is currently undefined behaviour."
+        #     )
         to_cell_type = to_cell_types[0]
         to_cell_model = self.adapter.cell_models[to_cell_type.name]
         return to_cell_model.neuron_model in to_cell_model.receptor_specifications
 
     def get_receptor_type(self):
         from_cell_types, to_cell_types = self.get_cell_types()
-        if len(to_cell_types) > 1:
-            raise NotImplementedError(
-                "Specifying receptor types of connections consisiting of more than 1 target cell type is currently undefined behaviour."
-            )
+        # if len(to_cell_types) > 1:
+        #     raise NotImplementedError(
+        #         "Specifying receptor types of connections consisiting of more than 1 target cell type is currently undefined behaviour."
+        #     )
         if len(from_cell_types) > 1:
             raise NotImplementedError(
                 "Specifying receptor types of connections consisting of more than 1 origin cell type is currently undefined behaviour."
@@ -289,6 +289,7 @@ class NestDevice(TargetsNeurons, SimulationComponent):
         """
         return self.adapter.get_nest_ids(
             np.array(self._get_targets(), dtype=int))
+
 
 class NestEntity(NestDevice, MapsScaffoldIdentifiers):
     node_name = "simulations.?.entities"
@@ -552,7 +553,8 @@ class NestAdapter(SimulatorAdapter):
             rank = 0
 
         timestamp = str(time.time()).split(".")[0] + str(_randint())
-        result_path = "results_" + self.name + "_" + timestamp + ".hdf5"
+        result_path = "/scratch/snx3000/bp000432/showcase_2/mouse_sarus/nest/results_" + \
+            self.name + "_" + timestamp + ".hdf5"
         if rank == 0:
             with h5py.File(result_path, "a") as f:
                 f.attrs["configuration_string"] = self.scaffold.configuration._raw
@@ -794,8 +796,15 @@ class NestAdapter(SimulatorAdapter):
                 for receptor_type in receptor_types:
                     single_connection_parameters = deepcopy(
                         connection_parameters)
+                    single_connection_parameters['synapse_model'] = single_connection_parameters['model']
+                    del(single_connection_parameters['model'])
                     if receptor_type is not None:
                         single_connection_parameters["receptor_type"] = receptor_type
+                    weights = np.ones_like(
+                        postsynaptic_targets) * single_connection_parameters['weight']
+                    single_connection_parameters['weight'] = weights
+                    single_connection_parameters['delay'] = np.ones_like(
+                        postsynaptic_targets) * single_connection_parameters['delay']
                     self.execute_command(
                         self.nest.Connect,
                         presynaptic_sources,
@@ -863,17 +872,13 @@ class NestAdapter(SimulatorAdapter):
         Create the configured NEST devices in the simulator
         """
         for device_model in self.devices.values():
-            print(device_model.parameters)
             device_model.initialise_targets()
-            print(device_model.parameters)
             device_model.protocol.before_create()
-            print(device_model.parameters)
             device = self.nest.Create(device_model.device)
             report("Creating device:  " + device_model.device, level=3)
             if hasattr(device_model, "record_to"):
                 device.record_to = device_model.record_to
             # Execute SetStatus and catch DictError
-            print(device_model.parameters)
             self.execute_command(
                 self.nest.SetStatus,
                 device,
@@ -1036,7 +1041,10 @@ class SpikeRecorder(SimulationRecorder):
     def get_data(self):
         from glob import glob
 
-        files = glob("*" + self.device_model.parameters["label"] + "*.dat")
+        if "path" in self.device_model.parameters.keys():
+            files = glob(self.device_model.parameters["path"] + "/" + self.device_model.parameters["label"] + "*.dat")
+        else:
+            files = glob("*" + self.device_model.parameters["label"] + "*.dat")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             spikes = np.zeros((0, 2), dtype=float)
@@ -1110,7 +1118,7 @@ class SpikeDetectorProtocol(DeviceProtocol):
         device_tag = mpi4py.MPI.COMM_WORLD.bcast(device_tag, root=0)
         if not hasattr(self.device, "_orig_label"):
             self.device._orig_label = self.device.parameters["label"]
-        if self.device.parameters["record_to"] != "mpi-stream":
+        if "record_to" in self.device.parameters and self.device.parameters["record_to"] != "mpi-stream":
             self.device.parameters["label"] = self.device._orig_label + device_tag
         if mpi4py.MPI.COMM_WORLD.rank == 0:
             self.device.adapter.result.add(SpikeRecorder(self.device))
