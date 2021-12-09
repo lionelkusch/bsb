@@ -1047,11 +1047,7 @@ class SpikeRecorder(SimulationRecorder):
 "nest")
         results_path += os.path.sep if results_path and not results_path.endswith(os.path.sep) else ''
         print('Results_path', results_path)
-
-        if "path" in self.device_model.parameters.keys():
-            files = glob(self.device_model.parameters["path"] + "/" + self.device_model.parameters["label"] + "*.dat")
-        else:
-            files = glob("*" + self.device_model.parameters["label"] + "*.dat")
+        files = glob(results_path + "/*" + self.device_model.parameters["label"] + "*.dat")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             spikes = np.zeros((0, 2), dtype=float)
