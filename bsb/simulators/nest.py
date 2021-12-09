@@ -553,37 +553,40 @@ class NestAdapter(SimulatorAdapter):
             rank = 0
 
         timestamp = str(time.time()).split(".")[0] + str(_randint())
-        result_path = "/scratch/snx3000/bp000432/showcase_2/mouse_sarus/nest/results_" + \
-            self.name + "_" + timestamp + ".hdf5"
+        result_path = self.scaffold.output_formatter.get_simulator_output_path(
+                    self.simulator_name
+                ) + self.name + "_" + timestamp + ".hdf5"
         if rank == 0:
             with h5py.File(result_path, "a") as f:
                 f.attrs["configuration_string"] = self.scaffold.configuration._raw
                 for path, data, meta in self.result.safe_collect():
-                    try:
-                        path = "/".join(path)
-                        if path in f:
-                            data = np.vstack((f[path][()], data))
-                            del f[path]
-                        d = f.create_dataset(path, data=data)
-                        for k, v in meta.items():
-                            d.attrs[k] = v
-                    except Exception as e:
-                        import traceback
+                    if 'co-sim' not in path[-1]:
+                        try:
+                            path = "/".join(path)
+                            if path in f:
+                                data = np.vstack((f[path][()], data))
+                                del f[path]
+                            print(data)
+                            d = f.create_dataset(path, data=data)
+                            for k, v in meta.items():
+                                d.attrs[k] = v
+                        except Exception as e:
+                            import traceback
 
-                        traceback.print_exc()
-                        if not isinstance(data, np.ndarray):
-                            warn(
-                                "Recorder {} numpy.ndarray expected, got {}".format(
-                                    path, type(data)
+                            traceback.print_exc()
+                            if not isinstance(data, np.ndarray):
+                                warn(
+                                    "Recorder {} numpy.ndarray expected, got {}".format(
+                                        path, type(data)
+                                    )
                                 )
-                            )
-                        else:
-                            warn(
-                                "Recorder {} processing errored out: {}".format(
-                                    path, "{} {}".format(
-                                        data.dtype, data.shape)
+                            else:
+                                warn(
+                                    "Recorder {} processing errored out: {}".format(
+                                        path, "{} {}".format(
+                                            data.dtype, data.shape)
+                                    )
                                 )
-                            )
         mpi4py.MPI.COMM_WORLD.bcast(result_path, root=0)
         report(
             f"Output collected in '{result_path}'. "
@@ -1040,6 +1043,10 @@ class SpikeRecorder(SimulationRecorder):
 
     def get_data(self):
         from glob import glob
+        results_path = self.device_model.adapter.scaffold.output_formatter.get_simulator_output_path(
+"nest")
+        results_path += os.path.sep if results_path and not results_path.endswith(os.path.sep) else ''
+        print('Results_path', results_path)
 
         if "path" in self.device_model.parameters.keys():
             files = glob(self.device_model.parameters["path"] + "/" + self.device_model.parameters["label"] + "*.dat")
@@ -1049,7 +1056,7 @@ class SpikeRecorder(SimulationRecorder):
             warnings.simplefilter("ignore")
             spikes = np.zeros((0, 2), dtype=float)
             for file in files:
-                file_spikes = np.loadtxt(file)
+                file_spikes = np.loadtxt(file,skiprows=3)
                 # if len(file_spikes):
                 if len(file_spikes.shape) > 1:
                     scaffold_ids = np.array(
