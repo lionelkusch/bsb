@@ -1046,15 +1046,14 @@ class SpikeRecorder(SimulationRecorder):
         results_path = self.device_model.adapter.scaffold.output_formatter.get_simulator_output_path(
 "nest")
         results_path += os.path.sep if results_path and not results_path.endswith(os.path.sep) else ''
-        print('Results_path', results_path)
         files = glob(results_path + "/*" + self.device_model.parameters["label"] + "*.dat")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             spikes = np.zeros((0, 2), dtype=float)
             for file in files:
                 file_spikes = np.loadtxt(file,skiprows=3)
-                # if len(file_spikes):
-                if len(file_spikes.shape) > 1:
+                file_spikes = np.reshape(file_spikes, (-1,2))
+                if file_spikes.shape[0] > 0:
                     scaffold_ids = np.array(
                         self.device_model.adapter.get_scaffold_ids(
                             file_spikes[:, 0])
