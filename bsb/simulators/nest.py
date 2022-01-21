@@ -318,7 +318,7 @@ class NestAdapter(SimulatorAdapter):
     defaults = {
         "default_synapse_model": "static_synapse",
         "default_neuron_model": "iaf_cond_alpha",
-        "verbosity": "M_ERROR",
+        "verbosity": "M_ALL",
         "threads": 1,
         "resolution": 1.0,
         "modules": [],
@@ -679,6 +679,10 @@ class NestAdapter(SimulatorAdapter):
         scaffold_map = {v: k for k, v in self.global_identifier_map.items()}
         return [scaffold_map[id] for id in ids]
 
+    def save_scaffold_ids(self, dest_dir):
+        scaffold_map = np.array([[v, k] for k, v in self.global_identifier_map.items()])
+        np.savetxt('scaffold_map.txt', scaffold_map, fmt='%i', delimiter=',')
+        
     def create_neurons(self):
         """
         Create a population of nodes in the NEST simulator based on the cell model
@@ -1043,31 +1047,32 @@ class SpikeRecorder(SimulationRecorder):
 
     def get_data(self):
         from glob import glob
-        results_path = self.device_model.adapter.scaffold.output_formatter.get_simulator_output_path(
-"nest")
-        results_path += os.path.sep if results_path and not results_path.endswith(os.path.sep) else ''
-        files = glob(results_path + "/*" + self.device_model.parameters["label"] + "*.dat")
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            spikes = np.zeros((0, 2), dtype=float)
-            for file in files:
-                file_spikes = np.loadtxt(file,skiprows=3)
-                file_spikes = np.reshape(file_spikes, (-1,2))
-                if file_spikes.shape[0] > 0:
-                    scaffold_ids = np.array(
-                        self.device_model.adapter.get_scaffold_ids(
-                            file_spikes[:, 0])
-                    )
-                    self.cell_types = list(
-                        set(
-                            self.device_model.adapter.scaffold.get_gid_types(
-                                scaffold_ids)
-                        )
-                    )
-                    times = file_spikes[:, 1]
-                    scaffold_spikes = np.column_stack((scaffold_ids, times))
-                    spikes = np.concatenate((spikes, scaffold_spikes))
-                os.remove(file)
+        # results_path = self.device_model.adapter.scaffold.output_formatter.get_simulator_output_path("nest")
+        # results_path += os.path.sep if results_path and not results_path.endswith(os.path.sep) else ''
+        # files = glob(results_path + "/*" + self.device_model.parameters["label"] + "*.dat")
+        # with warnings.catch_warnings():
+        #     warnings.simplefilter("ignore")
+        #     spikes = np.zeros((0, 2), dtype=float)
+        #     for file in files:
+        #         file_spikes = np.loadtxt(file,skiprows=3)
+        #         file_spikes = np.reshape(file_spikes, (-1,2))
+        #         if file_spikes.shape[0] > 0:
+        #             scaffold_ids = np.array(
+        #                 self.device_model.adapter.get_scaffold_ids(
+        #                     file_spikes[:, 0])
+        #             )
+        #             self.cell_types = list(
+        #                 set(
+        #                     self.device_model.adapter.scaffold.get_gid_types(
+        #                         scaffold_ids)
+        #                 )
+        #             )
+        #             times = file_spikes[:, 1]
+        #             scaffold_spikes = np.column_stack((scaffold_ids, times))
+        #             spikes = np.concatenate((spikes, scaffold_spikes))
+        #         os.remove(file)
+        self.device_model.adapter.save_scaffold_ids(results_path)
+        spikes = np.array([])
         return spikes
 
     def get_meta(self):
