@@ -1047,7 +1047,7 @@ class SpikeRecorder(SimulationRecorder):
 
     def get_data(self):
         from glob import glob
-        # results_path = self.device_model.adapter.scaffold.output_formatter.get_simulator_output_path("nest")
+        results_path = self.device_model.adapter.scaffold.output_formatter.get_simulator_output_path("nest")
         # results_path += os.path.sep if results_path and not results_path.endswith(os.path.sep) else ''
         # files = glob(results_path + "/*" + self.device_model.parameters["label"] + "*.dat")
         # with warnings.catch_warnings():
