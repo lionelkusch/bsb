@@ -350,6 +350,7 @@ class NestAdapter(SimulatorAdapter):
         self.has_lock = False
         self.global_identifier_map = {}
         self.simulation_id = _randint()
+        self.save_scaffold = False
 
     def prepare(self):
         if self.is_prepared:
@@ -680,9 +681,13 @@ class NestAdapter(SimulatorAdapter):
         return [scaffold_map[id] for id in ids]
 
     def save_scaffold_ids(self, dest_dir):
-        scaffold_map = np.array([[v, k] for k, v in self.global_identifier_map.items()])
-        np.savetxt('scaffold_map.txt', scaffold_map, fmt='%i', delimiter=',')
-        
+        if not self.save_scaffold:
+            scaffold_map = np.array([[v, k] for k, v in self.global_identifier_map.items()])
+            print(scaffold_map)
+            print(dest_dir+'/'+str(_MPI_rank)+'scaffold_map.txt')
+            np.savetxt(dest_dir+'/'+str(_MPI_rank)+'_scaffold_map.txt', scaffold_map, fmt='%i', delimiter=',')
+            self.save_scaffold = True
+
     def create_neurons(self):
         """
         Create a population of nodes in the NEST simulator based on the cell model
